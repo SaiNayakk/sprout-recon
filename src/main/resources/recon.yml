@@ -1,0 +1,84 @@
+# Configuration for the recon service. Named recon.yml (not application.yml) so several services can
+# share one JVM host without their settings colliding.
+spring:
+  application:
+    name: sprout-recon
+  datasource:
+    url: ${RECON_DB_URL:jdbc:postgresql://localhost:5432/sprout?currentSchema=recon}
+    username: ${RECON_DB_USER:sprout}
+    password: ${RECON_DB_PASSWORD:sprout}
+    hikari:
+      maximum-pool-size: 5
+      pool-name: recon
+      connection-timeout: 2000   # fail fast when the database is gone (CHAOS-01's lesson)
+      validation-timeout: 1000
+  flyway:
+    locations: classpath:db/recon
+    schemas: recon
+    default-schema: recon
+  jackson:
+    default-property-inclusion: non_null   # absent, never null: the contracts say so
+    deserialization:
+      fail-on-unknown-properties: true
+  jmx:
+    enabled: false
+
+server:
+  port: ${RECON_PORT:8114}
+  address: ${RECON_BIND:127.0.0.1}
+  tomcat:
+    threads:
+      max: 16
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  otlp:
+    metrics:
+      export:
+        enabled: ${OTEL_ENABLED:false}
+        url: ${OTEL_METRICS_URL:http://localhost:4318/v1/metrics}
+        step: 15s
+    tracing:
+      endpoint: ${OTEL_TRACES_URL:http://localhost:4318/v1/traces}
+  tracing:
+    enabled: ${OTEL_ENABLED:false}
+    sampling:
+      probability: 1.0
+  metrics:
+    tags:
+      service: sprout-recon
+
+logging:
+  structured:
+    format:
+      console: ${LOG_FORMAT:}
+  pattern:
+    correlation: "[%X{requestId:-}] "
+
+sprout:
+  recon:
+    service-key: ${SPROUT_SERVICE_KEY:dev-only-service-key}
+    check-every: ${RECON_CHECK_EVERY:60s}   # how often it looks whether today's run is due
+    run-at: "12:00"                         # market time; by then yesterday has settled
+    recheck-after: 2s                       # money in flight: a difference must still be there this much later
+    trade-days: 5                           # how many days back trades are compared with the exchange
+    marketdata-url: ${RECON_MARKETDATA_URL:http://127.0.0.1:8103}
+    ledger-url: ${RECON_LEDGER_URL:http://127.0.0.1:8106}
+    oms-url: ${RECON_OMS_URL:http://127.0.0.1:8109}
+    settlement-url: ${RECON_SETTLEMENT_URL:http://127.0.0.1:8112}
+    bank:
+      url: ${RECON_BANK_URL:http://127.0.0.1:8107}
+      partner-key: ${BANK_SPROUT_PARTNER_KEY:dev-only-partner-key}
+    exchange:
+      url: ${RECON_EXCHANGE_URL:http://127.0.0.1:8108}
+      member-key: ${EXCHANGE_SPROUT_MEMBER_KEY:dev-only-member-key}
+    depository:
+      url: ${RECON_DEPOSITORY_URL:http://127.0.0.1:8111}
+      participant-key: ${DEPOSITORY_SPROUT_PARTICIPANT_KEY:dev-only-participant-key}
