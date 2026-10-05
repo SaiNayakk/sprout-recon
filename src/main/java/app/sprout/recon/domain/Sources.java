@@ -42,8 +42,10 @@ public class Sources {
     private final ReconProperties props;
     private final ObjectMapper json;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(1)).build();
+    private final Onward onward;
 
-    public Sources(ReconProperties props, ObjectMapper json) {
+    public Sources(ReconProperties props, ObjectMapper json, Onward onward) {
+        this.onward = onward;
         this.props = props;
         this.json = json;
     }
@@ -109,6 +111,7 @@ public class Sources {
     private JsonNode get(String what, String url, String header, String value) {
         try {
             HttpRequest.Builder req = HttpRequest.newBuilder(URI.create(url)).timeout(DEADLINE).GET();
+            onward.headers(req);
             if (header != null) {
                 req.header(header, value);
             }
